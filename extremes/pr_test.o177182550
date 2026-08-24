@@ -1,0 +1,61 @@
+Loading conda/analysis3-26.07
+  Loading requirement: singularity
+
+=== historical / ACCESS-ESM1-5 / NARCliM2-0-WRF412R3 / r6i1p1f1 ===
+  → Aggregating pr with agg_type='mean'
+<xarray.DataArray 'plant' (lat: 444, lon: 388)> Size: 689kB
+dask.array<where, shape=(444, 388), dtype=float32, chunksize=(100, 20), chunktype=numpy.ndarray>
+Coordinates:
+  * lat      (lat) float64 4kB -39.98 -39.95 -39.91 ... -24.09 -24.05 -24.02
+  * lon      (lon) float64 3kB 140.0 140.1 140.1 140.1 ... 153.9 153.9 154.0 <xarray.DataArray (lat: 444, lon: 388)> Size: 689kB
+dask.array<where, shape=(444, 388), dtype=float32, chunksize=(100, 20), chunktype=numpy.ndarray>
+Coordinates:
+  * lat      (lat) float64 4kB -39.98 -39.95 -39.91 ... -24.09 -24.05 -24.02
+  * lon      (lon) float64 3kB 140.0 140.1 140.1 140.1 ... 153.9 153.9 154.0 <xarray.DataArray (lat: 444, lon: 388)> Size: 689kB
+dask.array<where, shape=(444, 388), dtype=float32, chunksize=(100, 20), chunktype=numpy.ndarray>
+Coordinates:
+  * lat      (lat) float64 4kB -39.98 -39.95 -39.91 ... -24.09 -24.05 -24.02
+  * lon      (lon) float64 3kB 140.0 140.1 140.1 140.1 ... 153.9 153.9 154.0 <xarray.DataArray 'harvest' (lat: 444, lon: 388)> Size: 689kB
+dask.array<where, shape=(444, 388), dtype=float32, chunksize=(100, 20), chunktype=numpy.ndarray>
+Coordinates:
+  * lat      (lat) float64 4kB -39.98 -39.95 -39.91 ... -24.09 -24.05 -24.02
+  * lon      (lon) float64 3kB 140.0 140.1 140.1 140.1 ... 153.9 153.9 154.0
+Traceback (most recent call last):
+  File "/home/561/mg5624/future_yield/extremes/growing_season_extremes.py", line 282, in <module>
+    main()
+  File "/home/561/mg5624/future_yield/extremes/growing_season_extremes.py", line 207, in main
+    ds_out = create_ds_of_aggregations_over_growing_season(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/561/mg5624/future_yield/extremes/extremes_characteristics_nc.py", line 354, in create_ds_of_aggregations_over_growing_season
+    full_growing_agg = aggregate_variable(extremes_da, [start_of_season, end_of_season], end_of_season, agg_type)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/561/mg5624/future_yield/extremes/extremes_characteristics_nc.py", line 152, in aggregate_variable
+    end_of_season_date = xr.apply_ufunc(
+                         ^^^^^^^^^^^^^^^
+  File "/g/data/xp65/public/apps/med_conda/envs/analysis3-26.07/lib/python3.12/site-packages/xarray/computation/apply_ufunc.py", line 1269, in apply_ufunc
+    return apply_dataarray_vfunc(
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/g/data/xp65/public/apps/med_conda/envs/analysis3-26.07/lib/python3.12/site-packages/xarray/computation/apply_ufunc.py", line 312, in apply_dataarray_vfunc
+    result_var = func(*data_vars)
+                 ^^^^^^^^^^^^^^^^
+  File "/g/data/xp65/public/apps/med_conda/envs/analysis3-26.07/lib/python3.12/site-packages/xarray/computation/apply_ufunc.py", line 820, in apply_variable_ufunc
+    result_data = func(*input_data)
+                  ^^^^^^^^^^^^^^^^^
+  File "/home/561/mg5624/future_yield/extremes/extremes_characteristics_nc.py", line 122, in doy_to_date
+    if np.isnan(x):
+       ^^^^^^^^^^^
+  File "/g/data/xp65/public/apps/med_conda/envs/analysis3-26.07/lib/python3.12/site-packages/dask/array/core.py", line 1877, in __bool__
+    raise ValueError(
+ValueError: The truth value of a Array is ambiguous. Use a.any() or a.all().
+
+======================================================================================
+                  Resource Usage on 2026-08-24 11:53:52:
+   Job Id:             177182550.gadi-pbs
+   Project:            dt6
+   Exit Status:        1
+   Service Units:      0.51
+   NCPUs Requested:    4                   CPU Time Used: 00:00:16        
+   Memory Requested:   100.0GB               Memory Used: 1.48GB          
+   Walltime Requested: 12:00:00            Walltime Used: 00:00:37        
+   JobFS Requested:    100.0MB                JobFS Used: 0B              
+======================================================================================

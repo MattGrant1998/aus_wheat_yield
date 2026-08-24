@@ -1,0 +1,19 @@
+#!/bin/bash
+#PBS -P dt6
+#PBS -q normal
+#PBS -l ncpus=4
+#PBS -l mem=30GB
+#PBS -l walltime=00:20:00
+#PBS -l storage=gdata/xp65+gdata/zz63+gdata/dt6+scratch/w97+gdata/w97
+#PBS -N yield_predict
+#PBS -j oe
+
+# Load the Singularity‑wrapped analysis3 environment
+module use /g/data/xp65/public/modules
+module load conda/analysis3
+
+# Move to the directory where the job was submitted
+cd /home/561/mg5624/future_yield/yield_predictions
+
+# Run your script
+python predict_past_yield.py

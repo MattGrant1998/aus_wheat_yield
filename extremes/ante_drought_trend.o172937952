@@ -1,0 +1,24 @@
+Loading conda/analysis3-26.05
+  Loading requirement: singularity
+/home/561/mg5624/future_yield/extremes/MK_trends.py:150: FutureWarning: A value is trying to be set on a copy of a DataFrame or Series through chained assignment using an inplace method.
+The behavior will change in pandas 3.0. This inplace method will never work because the intermediate object on which we are setting values always behaves as a copy.
+
+For example, when doing 'df[col].method(value, inplace=True)', try using 'df.method({col: value}, inplace=True)' or df[col] = df[col].method(value) instead, to perform the operation inplace on the original object.
+
+
+  trend_df['MK_trend'].replace({'no trend': 0, 'decreasing': -1, 'increasing': 1}, inplace=True)
+/home/561/mg5624/future_yield/extremes/MK_trends.py:150: FutureWarning: Downcasting behavior in `replace` is deprecated and will be removed in a future version. To retain the old behavior, explicitly call `result.infer_objects(copy=False)`. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  trend_df['MK_trend'].replace({'no trend': 0, 'decreasing': -1, 'increasing': 1}, inplace=True)
+Start calculating MK trend
+
+======================================================================================
+                  Resource Usage on 2026-07-03 20:54:06:
+   Job Id:             172937952.gadi-pbs
+   Project:            dt6
+   Exit Status:        0
+   Service Units:      40.39
+   NCPUs Requested:    8                   CPU Time Used: 00:53:32        
+   Memory Requested:   90.0GB                Memory Used: 2.77GB          
+   Walltime Requested: 04:00:00            Walltime Used: 00:53:51        
+   JobFS Requested:    100.0MB                JobFS Used: 37.0B           
+======================================================================================

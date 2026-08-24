@@ -1,0 +1,128 @@
+Loading conda/analysis3-26.05
+  Loading requirement: singularity
+multiprocessing.pool.RemoteTraceback: 
+"""
+Traceback (most recent call last):
+  File "/g/data/xp65/public/apps/med_conda/envs/analysis3-26.05/lib/python3.12/site-packages/xarray/backends/file_manager.py", line 219, in _acquire_with_cache_info
+    file = self._cache[self._key]
+           ~~~~~~~~~~~^^^^^^^^^^^
+  File "/g/data/xp65/public/apps/med_conda/envs/analysis3-26.05/lib/python3.12/site-packages/xarray/backends/lru_cache.py", line 56, in __getitem__
+    value = self._cache[key]
+            ~~~~~~~~~~~^^^^^
+KeyError: [<class 'netCDF4._netCDF4.Dataset'>, ('/srv/ccrc/LandAU/z5459957/data/extremes/FY_aggregated/30_day_precip_drought_FY_antecedent_agg_1950-2021.nc',), 'r', (('clobber', True), ('diskless', False), ('format', 'NETCDF4'), ('persist', False)), 'd4e440be-c635-4b92-9f46-4a50cae42a1b']
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/g/data/xp65/public/apps/med_conda/envs/analysis3-26.05/lib/python3.12/multiprocessing/pool.py", line 125, in worker
+    result = (True, func(*args, **kwds))
+                    ^^^^^^^^^^^^^^^^^^^
+  File "/g/data/xp65/public/apps/med_conda/envs/analysis3-26.05/lib/python3.12/multiprocessing/pool.py", line 51, in starmapstar
+    return list(itertools.starmap(args[0], args[1]))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/561/mg5624/future_yield/extremes/MK_trends.py", line 192, in load_and_save_data
+    data = xr.open_dataarray(data_files_in)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/g/data/xp65/public/apps/med_conda/envs/analysis3-26.05/lib/python3.12/site-packages/xarray/backends/api.py", line 813, in open_dataarray
+    dataset = open_dataset(
+              ^^^^^^^^^^^^^
+  File "/g/data/xp65/public/apps/med_conda/envs/analysis3-26.05/lib/python3.12/site-packages/xarray/backends/api.py", line 606, in open_dataset
+    backend_ds = backend.open_dataset(
+                 ^^^^^^^^^^^^^^^^^^^^^
+  File "/g/data/xp65/public/apps/med_conda/envs/analysis3-26.05/lib/python3.12/site-packages/xarray/backends/netCDF4_.py", line 771, in open_dataset
+    store = NetCDF4DataStore.open(
+            ^^^^^^^^^^^^^^^^^^^^^^
+  File "/g/data/xp65/public/apps/med_conda/envs/analysis3-26.05/lib/python3.12/site-packages/xarray/backends/netCDF4_.py", line 529, in open
+    return cls(manager, group=group, mode=mode, lock=lock, autoclose=autoclose)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/g/data/xp65/public/apps/med_conda/envs/analysis3-26.05/lib/python3.12/site-packages/xarray/backends/netCDF4_.py", line 429, in __init__
+    self.format = self.ds.data_model
+                  ^^^^^^^
+  File "/g/data/xp65/public/apps/med_conda/envs/analysis3-26.05/lib/python3.12/site-packages/xarray/backends/netCDF4_.py", line 538, in ds
+    return self._acquire()
+           ^^^^^^^^^^^^^^^
+  File "/g/data/xp65/public/apps/med_conda/envs/analysis3-26.05/lib/python3.12/site-packages/xarray/backends/netCDF4_.py", line 532, in _acquire
+    with self._manager.acquire_context(needs_lock) as root:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/g/data/xp65/public/apps/med_conda/envs/analysis3-26.05/lib/python3.12/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/g/data/xp65/public/apps/med_conda/envs/analysis3-26.05/lib/python3.12/site-packages/xarray/backends/file_manager.py", line 207, in acquire_context
+    file, cached = self._acquire_with_cache_info(needs_lock)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/g/data/xp65/public/apps/med_conda/envs/analysis3-26.05/lib/python3.12/site-packages/xarray/backends/file_manager.py", line 225, in _acquire_with_cache_info
+    file = self._opener(*self._args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/netCDF4/_netCDF4.pyx", line 2521, in netCDF4._netCDF4.Dataset.__init__
+  File "src/netCDF4/_netCDF4.pyx", line 2158, in netCDF4._netCDF4._ensure_nc_success
+FileNotFoundError: [Errno 2] No such file or directory: '/srv/ccrc/LandAU/z5459957/data/extremes/FY_aggregated/30_day_precip_drought_FY_antecedent_agg_1950-2021.nc'
+"""
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/561/mg5624/future_yield/extremes/MK_trends.py", line 264, in <module>
+    main()
+  File "/home/561/mg5624/future_yield/extremes/MK_trends.py", line 260, in main
+    run_MK_test_for_variables()
+  File "/home/561/mg5624/future_yield/extremes/MK_trends.py", line 254, in run_MK_test_for_variables
+    pool.starmap(load_and_save_data, arguments)
+  File "/g/data/xp65/public/apps/med_conda/envs/analysis3-26.05/lib/python3.12/multiprocessing/pool.py", line 375, in starmap
+    return self._map_async(func, iterable, starmapstar, chunksize).get()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/g/data/xp65/public/apps/med_conda/envs/analysis3-26.05/lib/python3.12/multiprocessing/pool.py", line 774, in get
+    raise self._value
+  File "/g/data/xp65/public/apps/med_conda/envs/analysis3-26.05/lib/python3.12/multiprocessing/pool.py", line 125, in worker
+    result = (True, func(*args, **kwds))
+^^^^^^^^^^^^^^^
+  File "/g/data/xp65/public/apps/med_conda/envs/analysis3-26.05/lib/python3.12/multiprocessing/pool.py", line 51, in starmapstar
+    return list(itertools.starmap(args[0], args[1]))
+      ^^^^^^^^^^^^^^^^^
+  File "/home/561/mg5624/future_yield/extremes/MK_trends.py", line 192, in load_and_save_data
+    data = xr.open_dataarray(data_files_in)
+  ^^^^^^^^^^^^^^^^^
+  File "/g/data/xp65/public/apps/med_conda/envs/analysis3-26.05/lib/python3.12/site-packages/xarray/backends/api.py", line 813, in open_dataarray
+    dataset = open_dataset(
+      ^^^^^^^^^^^^^^^^^
+  File "/g/data/xp65/public/apps/med_conda/envs/analysis3-26.05/lib/python3.12/site-packages/xarray/backends/api.py", line 606, in open_dataset
+    backend_ds = backend.open_dataset(
+      ^^^^^^^^^^^^^^^^^
+  File "/g/data/xp65/public/apps/med_conda/envs/analysis3-26.05/lib/python3.12/site-packages/xarray/backends/netCDF4_.py", line 771, in open_dataset
+    store = NetCDF4DataStore.open(
+  ^^^^^^^^^^^^^^^^^
+  File "/g/data/xp65/public/apps/med_conda/envs/analysis3-26.05/lib/python3.12/site-packages/xarray/backends/netCDF4_.py", line 529, in open
+    return cls(manager, group=group, mode=mode, lock=lock, autoclose=autoclose)
+  ^^^^^^^^^^^^^^^^^
+  File "/g/data/xp65/public/apps/med_conda/envs/analysis3-26.05/lib/python3.12/site-packages/xarray/backends/netCDF4_.py", line 429, in __init__
+    self.format = self.ds.data_model
+  ^^^^^^^^^^^^^^^^^
+  File "/g/data/xp65/public/apps/med_conda/envs/analysis3-26.05/lib/python3.12/site-packages/xarray/backends/netCDF4_.py", line 538, in ds
+    return self._acquire()
+  ^^^^^^^^^^^^^^^^^
+  File "/g/data/xp65/public/apps/med_conda/envs/analysis3-26.05/lib/python3.12/site-packages/xarray/backends/netCDF4_.py", line 532, in _acquire
+    with self._manager.acquire_context(needs_lock) as root:
+  ^^^^^^^^^^^^^^^^^
+  File "/g/data/xp65/public/apps/med_conda/envs/analysis3-26.05/lib/python3.12/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+^^^^^^^^^^^^^^^
+  File "/g/data/xp65/public/apps/med_conda/envs/analysis3-26.05/lib/python3.12/site-packages/xarray/backends/file_manager.py", line 207, in acquire_context
+    file, cached = self._acquire_with_cache_info(needs_lock)
+  ^^^^^^^^^^^^^^^^^
+  File "/g/data/xp65/public/apps/med_conda/envs/analysis3-26.05/lib/python3.12/site-packages/xarray/backends/file_manager.py", line 225, in _acquire_with_cache_info
+    file = self._opener(*self._args, **kwargs)
+^^^^^^^^^^^
+  File "src/netCDF4/_netCDF4.pyx", line 2521, in netCDF4._netCDF4.Dataset.__init__
+  File "src/netCDF4/_netCDF4.pyx", line 2158, in netCDF4._netCDF4._ensure_nc_success
+FileNotFoundError: [Errno 2] No such file or directory: '/srv/ccrc/LandAU/z5459957/data/extremes/FY_aggregated/30_day_precip_drought_FY_antecedent_agg_1950-2021.nc'
+
+======================================================================================
+                  Resource Usage on 2026-07-03 19:25:22:
+   Job Id:             172937092.gadi-pbs
+   Project:            dt6
+   Exit Status:        1
+   Service Units:      0.36
+   NCPUs Requested:    8                   CPU Time Used: 00:00:16        
+   Memory Requested:   90.0GB                Memory Used: 1.15GB          
+   Walltime Requested: 04:00:00            Walltime Used: 00:00:29        
+   JobFS Requested:    100.0MB                JobFS Used: 37.0B           
+======================================================================================

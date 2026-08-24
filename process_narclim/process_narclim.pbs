@@ -1,0 +1,19 @@
+#!/bin/bash
+#PBS -P dt6
+#PBS -q normal
+#PBS -l ncpus=4
+#PBS -l mem=100GB
+#PBS -l walltime=24:00:00
+#PBS -l storage=gdata/xp65+gdata/zz63+gdata/dt6+scratch/w97
+#PBS -N process_narclim
+#PBS -j oe
+
+# Load the Singularity‑wrapped analysis3 environment
+module use /g/data/xp65/public/modules
+module load conda/analysis3
+
+# Move to the directory where the job was submitted
+cd /home/561/mg5624/future_yield/process_narclim/
+
+# Run your script
+python process_narclim.py
