@@ -28,7 +28,7 @@ NC_VAR_NAME = {
     "tmax": "tmax",
     "tmin": "tmin",
     "precip": "precip",
-    "sm": "root_zone_soil_moisture",
+    "sm": "awra_root_zone_soil_moisture",
 }
 
 # Full period to process and the baseline used for percentile thresholds
@@ -140,22 +140,32 @@ def find_percentile_at_grid(rolling_data_da, baseline, threshold):
     return percentiles
 
 
-def find_drought_days(hydrological_data, var_name, n_days, threshold,
-                      threshold_type="percentile", baseline="full_ts"):
-    print('Raw data: \n', hydrological_data)
-    hyd_rolling = rolling_data(hydrological_data, n_days, "mean")
-
+def find_drought_days(processing_data, var_name, n_days, threshold,
+                      threshold_type="percentile", baseline_data=None):
+    """
+    processing_data: the data to actually flag drought days on (e.g. your
+        START_YEAR-END_YEAR period).
+    baseline_data: a SEPARATE DataArray already scoped to the baseline
+        period (e.g. BASELINE years), used only to derive percentile
+        thresholds. Required if threshold_type == 'percentile'. It does
+        NOT need to overlap processing_data -- it can come from
+        completely different files (see load_baseline() in main()).
+    """
+    proc_rolling = rolling_data(processing_data, n_days, "mean")
+ 
     if threshold_type == "percentile":
-        print('Rolling data: \n', hyd_rolling)
-        percentile_data = find_percentile_at_grid(hyd_rolling, baseline, threshold)
-        print('percentile data: \n', percentile_data)
-        thresholds = percentile_data.sel(dayofyear=hyd_rolling["time.dayofyear"])
-        drought_days = hyd_rolling.where(hyd_rolling < thresholds)
+        if baseline_data is None:
+            raise ValueError("baseline_data is required when threshold_type='percentile'")
+        baseline_rolling = rolling_data(baseline_data, n_days, "mean")
+        percentile_data = find_percentile_at_grid(baseline_rolling, threshold)
+ 
+        thresholds = percentile_data.sel(dayofyear=proc_rolling["time.dayofyear"])
+        drought_days = proc_rolling.where(proc_rolling < thresholds)
     elif threshold_type == "absolute":
-        drought_days = hyd_rolling.where(hyd_rolling < threshold)
+        drought_days = proc_rolling.where(proc_rolling < threshold)
     else:
         raise ValueError("threshold_type must be 'percentile' or 'absolute'")
-
+ 
     drought_days = drought_days.rename(f"{n_days}_day_{var_name}_drought")
     return drought_days
 
@@ -263,15 +273,39 @@ def open_awra_sm(start_year, end_year):
     return ds
 
 
-def save_da(out_root, var_name, da):
+def save_da(out_path, out_file, da):
     """Save a DataArray to out_root/var_name/var_name.nc"""
-    out_dir = out_root / var_name
-    out_dir.mkdir(parents=True, exist_ok=True)
-    out_path = out_dir / f"{var_name}.nc"
-    da.to_netcdf(out_path)
-    print(f"Saved {var_name} -> {out_path}")
+    out_path.mkdir(parents=True, exist_ok=True)
+    da.to_netcdf(out_path + out_file)
+    print(f"Saved {out_file} in {out_path}")
     return out_path
 
+
+def load_baseline(label, nc_var_name, proc_ds, opener):
+    """
+    Return a DataArray covering BASELINE years for `nc_var_name`.
+ 
+    If BASELINE is already fully inside [START_YEAR, END_YEAR] (i.e. the
+    processing-period data you already opened covers it), just slice it
+    out of `proc_ds` -- no extra files touched. Otherwise open a second,
+    independent set of files just for the baseline years via `opener`
+    (opener signature: opener(start_year, end_year) -> Dataset | None).
+    """
+    b_start, b_end = BASELINE
+ 
+    if proc_ds is not None and b_start >= START_YEAR and b_end <= END_YEAR:
+        print(f"[baseline:{label}] reusing already-loaded data for {b_start}-{b_end}")
+        return proc_ds[nc_var_name].sel(
+            time=slice(f"{b_start}-01-01", f"{b_end}-12-31")
+        )
+ 
+    print(f"[baseline:{label}] loading separate files for {b_start}-{b_end}")
+    baseline_ds = opener(b_start, b_end)
+    if baseline_ds is None:
+        print(f"[baseline:{label}] WARNING no files found for baseline period -- "
+              f"percentile drought indices for {label} will be skipped")
+        return None
+    return baseline_ds[nc_var_name]
 
 # =====================================================================
 # Main workflow
@@ -289,68 +323,89 @@ def main():
     # heatwave (tmax > 32)
     # ------------------------------------------------------------------
     if ds_tmax is not None:
-        out_path = OUT_ROOT / "heatwave" / "heatwave.nc"
-        if out_path.exists():
-            print(f"[SKIP] {out_path} already exists")
+        out_path = OUT_ROOT / "heatwave" 
+        out_file = f"heatwave_{START_YEAR}-{END_YEAR}.nc"
+        if (out_path+out_file).exists():
+            print(f"[SKIP] {out_path + out_file} already exists")
         else:
             hw = find_heatwave_days(ds_tmax[NC_VAR_NAME["tmax"]], threshold=32.0)
-            save_da(OUT_ROOT, "heatwave", hw)
+            save_da(out_path, out_file, hw)
 
     # ------------------------------------------------------------------
     # frost (tmin < 0)
     # ------------------------------------------------------------------
     if ds_tmin is not None:
-        out_path = OUT_ROOT / "frost" / "frost.nc"
-        if out_path.exists():
-            print(f"[SKIP] {out_path} already exists")
+        out_path = OUT_ROOT / "frost" 
+        out_file = f"frost_{START_YEAR}-{END_YEAR}.nc"
+        if (out_path + out_file).exists():
+            print(f"[SKIP] {out_path + out_file} already exists")
         else:
             frost = find_frost_days(ds_tmin[NC_VAR_NAME["tmin"]])
-            save_da(OUT_ROOT, "frost", frost)
+            save_da(out_path, out_file, frost)
 
     # ------------------------------------------------------------------
     # gdd (tmax, tmin)
     # ------------------------------------------------------------------
     if ds_tmax is not None and ds_tmin is not None:
-        out_path = OUT_ROOT / "gdd" / "gdd.nc"
-        if out_path.exists():
-            print(f"[SKIP] {out_path} already exists")
+        out_path = OUT_ROOT / "gdd" 
+        out_file = f"gdd_{START_YEAR}-{END_YEAR}.nc"
+        if (out_path + out_file).exists():
+            print(f"[SKIP] {out_path + out_file} already exists")
         else:
             gdd = growing_degree_days(
                 ds_tmax[NC_VAR_NAME["tmax"]], ds_tmin[NC_VAR_NAME["tmin"]], basetemp=0.0
             )
-            save_da(OUT_ROOT, "gdd", gdd)
+            save_da(out_path, out_file, gdd)
 
     # ------------------------------------------------------------------
     # tr (tmax, tmin)
     # ------------------------------------------------------------------
     if ds_tmax is not None and ds_tmin is not None:
-        out_path = OUT_ROOT / "tr" / "tr.nc"
-        if out_path.exists():
-            print(f"[SKIP] {out_path} already exists")
+        out_path = OUT_ROOT / "tr" 
+        out_file = f"tr_{START_YEAR}-{END_YEAR}.nc"
+        if (out_path + out_file).exists():
+            print(f"[SKIP] {out_path + out_file} already exists")
         else:
             tr = temperature_range(ds_tmax[NC_VAR_NAME["tmax"]], ds_tmin[NC_VAR_NAME["tmin"]])
-            save_da(OUT_ROOT, "tr", tr)
+            save_da(out_path, out_file, tr)
 
     # ------------------------------------------------------------------
     # cdd (precip)
     # ------------------------------------------------------------------
     if ds_precip is not None:
-        out_path = OUT_ROOT / "cdd" / "cdd.nc"
-        if out_path.exists():
-            print(f"[SKIP] {out_path} already exists")
+        out_path = OUT_ROOT / "cdd" 
+        out_file = f"cdd_{START_YEAR}-{END_YEAR}.nc"
+        if (out_path + out_file).exists():
+            print(f"[SKIP] {out_path + out_file} already exists")
         else:
             cdd = consecutive_dry_days(ds_precip[NC_VAR_NAME["precip"]])
-            save_da(OUT_ROOT, "cdd", cdd)
+            save_da(out_path, out_file, cdd)
 
     # ------------------------------------------------------------------
     # drought (precip, N-day rolling, percentile threshold)
     # ------------------------------------------------------------------
+
+    baseline_precip = None
     if ds_precip is not None:
+        baseline_precip = load_baseline(
+            "precip", NC_VAR_NAME["precip"], ds_precip,
+            lambda s, e: open_agcd_var("precip", s, e),
+        )
+ 
+    baseline_sm = None
+    if ds_sm is not None:
+        baseline_sm = load_baseline(
+            "sm", NC_VAR_NAME["sm"], ds_sm, open_awra_sm
+        )
+
+
+    if ds_precip is not None and baseline_precip is not None:
         for w in DROUGHT_WINDOWS:
             var_name = f"precip_drought_{w}"
-            out_path = OUT_ROOT / var_name / f"{var_name}.nc"
-            if out_path.exists():
-                print(f"[SKIP] {out_path} already exists")
+            out_path = OUT_ROOT / var_name
+            out_file = f"{var_name}_{START_YEAR}-{END_YEAR}.nc"
+            if (out_path + out_file).exists():
+                print(f"[SKIP] {out_path + out_file} already exists")
                 continue
             precip_drought = find_drought_days(
                 ds_precip[NC_VAR_NAME["precip"]],
@@ -358,20 +413,21 @@ def main():
                 w,
                 DROUGHT_THRESHOLD,
                 threshold_type=DROUGHT_THRESHOLD_TYPE,
-                baseline=BASELINE,
+                baseline_data=baseline_precip,
             )
             precip_drought = precip_drought.rename(var_name)
-            save_da(OUT_ROOT, var_name, precip_drought)
+            save_da(out_path, out_file, precip_drought)
 
     # ------------------------------------------------------------------
     # drought (soil moisture, N-day rolling, percentile threshold)
     # ------------------------------------------------------------------
-    if ds_sm is not None:
+    if ds_sm is not None and baseline_sm is not None:
         for w in DROUGHT_WINDOWS:
             var_name = f"sm_drought_{w}"
-            out_path = OUT_ROOT / var_name / f"{var_name}.nc"
-            if out_path.exists():
-                print(f"[SKIP] {out_path} already exists")
+            out_path = OUT_ROOT / var_name 
+            out_file = f"{var_name}_{START_YEAR}-{END_YEAR}.nc"
+            if (out_path + out_file).exists():
+                print(f"[SKIP] {out_path + out_file} already exists")
                 continue
             sm_drought = find_drought_days(
                 ds_sm[NC_VAR_NAME["sm"]],
@@ -379,10 +435,10 @@ def main():
                 w,
                 DROUGHT_THRESHOLD,
                 threshold_type=DROUGHT_THRESHOLD_TYPE,
-                baseline=BASELINE,
+                baseline_data=baseline_sm,
             )
             sm_drought = sm_drought.rename(var_name)
-            save_da(OUT_ROOT, var_name, sm_drought)
+            save_da(out_path, out_file, sm_drought)
 
 
 if __name__ == "__main__":
