@@ -1,11 +1,11 @@
 #!/bin/bash
 #PBS -P dt6
-#PBS -q hugemem
-#PBS -l ncpus=4
-#PBS -l mem=400GB
-#PBS -l walltime=32:00:00
+#PBS -q normal
+#PBS -l ncpus=1
+#PBS -l mem=50GB
+#PBS -l walltime=1:00:00
 #PBS -l storage=gdata/xp65+gdata/zz63+gdata/dt6+scratch/w97+gdata/w97+gdata/zv2
-#PBS -N sm_agg
+#PBS -N combine_FYs
 #PBS -j oe
 
 # Load the Singularity‑wrapped analysis3 environment
@@ -16,4 +16,4 @@ module load conda/analysis3
 cd /home/561/mg5624/yield_trends/extremes/
 
 # Run your script
-python growing_season_aggregate_vars.py
+python combine_timeseries.py

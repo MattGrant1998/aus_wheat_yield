@@ -5,7 +5,7 @@
 #PBS -l mem=500GB
 #PBS -l walltime=48:00:00
 #PBS -l storage=gdata/xp65+gdata/zz63+gdata/dt6+scratch/w97+gdata/w97+gdata/zv2
-#PBS -N cdd2
+#PBS -N 2021-2025_daily_vars
 #PBS -j oe
 
 # Load the Singularity‑wrapped analysis3 environment
@@ -13,7 +13,7 @@ module use /g/data/xp65/public/modules
 module load conda/analysis3
 
 # Move to the directory where the job was submitted
-cd /home/561/mg5624/future_yield/extremes/
+cd /home/561/mg5624/yield_trends/extremes/
 
 # Run your script
-python extremes_functions_on_nc.py
+python daily_extremes.py

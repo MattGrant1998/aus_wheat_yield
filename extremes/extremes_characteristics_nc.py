@@ -145,7 +145,10 @@ def doy_to_date(x, year):
 #     return out
 
 def aggregate_variable(extremes_da, season_stage_doys, end_of_season_doy, agg_type):
-    extremes_da['time'] = pd.to_datetime(extremes_da['time'].values)
+    if isinstance(extremes_da.indexes['time'], xr.CFTimeIndex):
+        extremes_da['time'] = extremes_da.indexes['time'].to_datetimeindex()
+    else:
+        extremes_da['time'] = pd.to_datetime(extremes_da['time'].values)
     agg_var_ds = xr.Dataset()
     start_stage_doy, end_stage_doy = season_stage_doys
     for year in np.unique(extremes_da['time.year'])[1:]:
