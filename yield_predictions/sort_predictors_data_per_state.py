@@ -3,43 +3,43 @@ import pandas as pd
 import os
 
 STATE_MASKS = {
-    # 'NSW': 1,
-    # 'VIC': 2,
-    # 'QLD': 3,
-    # 'SA': 4,
+    'NSW': 1,
+    'VIC': 2,
+    'QLD': 3,
+    'SA': 4,
     'WA': 5
 }
 
 PREDICTORS = [
-    '180_day_precip_drought',
-    '180_day_precip_drought_intensity',
-    '180_day_soil_moisture_drought',
-    '180_day_soil_moisture_drought_intensity',
-    'consecutive_dry_days',
+    'precip_drought_180',
+    'precip_drought_180_intensity',
+    'sm_drought_180',
+    'sm_drought_180_intensity',
+    'cdd',
     'frost',
-    'growing_degree_days',
+    'gdd',
     'heatwave',
     'heatwave_intensity',
     'precip',
-    'soil_moisture',
-    'temperature_range',
+    'sm',
+    'tr',
     'tmax',
     'tmin',
 ]
 
 PREDICTOR_AGG = {
-    '180_day_precip_drought': 'sum',
-    '180_day_precip_drought_intensity': 'mean',
-    '180_day_soil_moisture_drought': 'sum',
-    '180_day_soil_moisture_drought_intensity': 'mean',
-    'consecutive_dry_days': 'max',
+    'precip_drought_180': 'sum',
+    'precip_drought_180_intensity': 'mean',
+    'sm_drought_180': 'sum',
+    'sm_drought_180_intensity': 'mean',
+    'cdd': 'max',
     'frost': 'sum',
-    'growing_degree_days': 'sum',
+    'gdd': 'sum',
     'heatwave': 'sum',
     'heatwave_intensity': 'mean',
     'precip': 'mean',
-    'soil_moisture': 'mean',
-    'temperature_range': 'mean',
+    'sm': 'mean',
+    'tr': 'mean',
     'tmax': 'mean',
     'tmin': 'mean'
 }
@@ -57,12 +57,15 @@ def load_state_mask():
     return state_mask
 
 
-def load_predictors_data(state):
+def load_predictors_data(state, start_year, end_year):
     """
     Load the predictors data for a specific state from a NetCDF file.
 
     Args:
         state (str): The state name (e.g., 'NSW', 'VIC', 'QLD', 'SA', 'WA').
+        start_year (int): The starting year for the data range.
+        end_year (int): The ending year for the data range.
+
     Returns:
         xarray.Dataset: The predictors dataset for the specified state.
     """
@@ -71,13 +74,13 @@ def load_predictors_data(state):
     state_masked = state_mask.where(state_mask == state_mask_value)
 
     intensity_predictors = [
-        '180_day_precip_drought_intensity',
-        '180_day_soil_moisture_drought_intensity',
+        'precip_drought_180_intensity',
+        'sm_drought_180_intensity',
         'heatwave_intensity'
     ]
     predictors_data = {}
     for predictor in PREDICTORS:
-        path = f'/g/data/w97/mg5624/ABS_project/extremes/FY_aggregated/{predictor}_FY_agg_1950-2021.nc'
+        path = f'/g/data/w97/mg5624/ABS_project/extremes/FY_aggregated/{predictor}/{predictor}_FY_aggregated_{start_year}-{end_year}.nc'
         agg = PREDICTOR_AGG[predictor]
         predictor_data = xr.open_dataset(path)[f'growing_seas_{predictor}_{agg}']
         if predictor in intensity_predictors:
@@ -88,25 +91,29 @@ def load_predictors_data(state):
     return predictors_dataset
 
 
-def save_predictors_data_per_state(state, predictors_dataset):
+def save_predictors_data_per_state(state, predictors_dataset, start_year, end_year):
     """
     Save the predictors dataset for a specific state to a NetCDF file.
 
     Args:
         state (str): The state name (e.g., 'NSW', 'VIC', 'QLD', 'SA', 'WA').
         predictors_dataset (xarray.Dataset): The predictors dataset for the specified state.
+        start_year (int): The starting year for the data range.
+        end_year (int): The ending year for the data range.
     """
-    output_path = f'/g/data/w97/mg5624/ABS_project/predictors_per_state/{state}_predictors.nc'
+    output_path = f'/g/data/w97/mg5624/ABS_project/predictors_per_state/{state}_predictors_{start_year}-{end_year}.nc'
     if not os.path.exists(os.path.dirname(output_path)):
         os.makedirs(os.path.dirname(output_path))
     predictors_dataset.to_netcdf(output_path)
 
 
 def main():
+    start_year = 2022
+    end_year = 2025
     for state in STATE_MASKS.keys():
         print(f"Processing predictors for state: {state}")
-        predictors_dataset = load_predictors_data(state)
-        save_predictors_data_per_state(state, predictors_dataset)
+        predictors_dataset = load_predictors_data(state, start_year, end_year)
+        save_predictors_data_per_state(state, predictors_dataset, start_year, end_year)
         print(f"Saved predictors dataset for state: {state}")
 
 

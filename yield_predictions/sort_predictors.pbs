@@ -13,7 +13,7 @@ module use /g/data/xp65/public/modules
 module load conda/analysis3
 
 # Move to the directory where the job was submitted
-cd /home/561/mg5624/future_yield/yield_predictions
+cd /home/561/mg5624/yield_trends/yield_predictions/
 
 # Run your script
 python sort_predictors_data_per_state.py

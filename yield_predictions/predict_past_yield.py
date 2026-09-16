@@ -19,7 +19,7 @@ def load_yield_model(state):
     return yield_model
 
 
-def load_predictors_data(state, required_cols=None):
+def load_predictors_data(state, years=None, required_cols=None):
     """
     Load the predictors data for a given state.
 
@@ -28,10 +28,14 @@ def load_predictors_data(state, required_cols=None):
     Returns:
         pandas.DataFrame: The predictors data for the specified state.
     """
-    predictors_path = f'/g/data/w97/mg5624/ABS_project/predictors_per_state/{state}_predictors.nc'
+    if years is not None:
+        predictors_path = f'/g/data/w97/mg5624/ABS_project/predictors_per_state/{state}_predictors_{years[0]}-{years[1]}.nc'
+    else:
+        predictors_path = f'/g/data/w97/mg5624/ABS_project/predictors_per_state/{state}_predictors.nc'
     predictors_data = xr.open_dataset(predictors_path)
     predictors_df = predictors_data.to_dataframe().reset_index()
-    print(predictors_df.columns)
+    predictors_df = predictors_df.rename(columns=rename_raw_column) # ensure correct naming structure of vars
+    print("predictors_df columns: \n", predictors_df.columns.tolist())
     if required_cols is not None:
         predictors_df = predictors_df.dropna(subset=required_cols)
     else:
@@ -85,6 +89,48 @@ def check_year_coverage(raw_df, filtered_df, predictors, state):
     return missing_years
 
 
+def rename_raw_column(col):
+    """
+    Rename a raw predictor column name to match the format used by the
+    yield models. Idempotent: safe to apply more than once, since the
+    drought restructuring only fires when the name is still in the
+    unconverted '{var}_drought_{n}_...' form.
+    """
+    SIMPLE_RENAMES = {
+        '_sm_': '_soil_moisture_',
+        '_gdd_': '_growing_degree_days_',
+        '_cdd_': '_consecutive_dry_days_',
+        '_tr_': '_temperature_range_',
+    }
+
+    tokens = col.split('_')
+
+    if 'drought' in tokens:
+        idx = tokens.index('drought')
+        # only restructure if this still looks like the original
+        # '{var}_drought_{n}_...' form -- i.e. the token straight after
+        # 'drought' is a digit. If it's already 'day' before 'drought',
+        # or the following token isn't numeric, it's already converted
+        # (or not in the pattern we expect), so leave it alone.
+        already_converted = idx > 0 and tokens[idx - 1] == 'day'
+        next_is_digit = idx + 1 < len(tokens) and tokens[idx + 1].isdigit()
+
+        if not already_converted and next_is_digit:
+            var = tokens[idx - 1]
+            n = tokens[idx + 1]
+            prefix = tokens[:idx - 1]
+            suffix = tokens[idx + 2:]
+            tokens = prefix + [n, 'day', var, 'drought'] + suffix
+
+    col = '_'.join(tokens)
+
+    padded = f'_{col}_'
+    for old, new in SIMPLE_RENAMES.items():
+        padded = padded.replace(old, new)
+
+    return padded.strip('_')
+
+
 def predict_yield(state, years=None):
     """
     Predict the yield for a given state using the loaded yield model and predictors data.
@@ -97,12 +143,15 @@ def predict_yield(state, years=None):
     """
     yield_model = load_yield_model(state)
     predictors = yield_model.feature_names_in_.tolist()  # Get the feature names used in the model
-
+    print("RF model's predictor names: \n", predictors)
     # Load raw (unfiltered) predictors to compare against the filtered version
     predictors_path = f'/g/data/w97/mg5624/ABS_project/predictors_per_state/{state}_predictors.nc'
     raw_df = xr.open_dataset(predictors_path).to_dataframe().reset_index()
+    raw_df = raw_df.rename(columns=rename_raw_column) # ensure correct naming structure of vars
+    print("Raw df going in names: \n", raw_df.columns.tolist())
 
-    predictors_df = load_predictors_data(state, required_cols=predictors)
+    predictors_df = load_predictors_data(state, years=years, required_cols=predictors)
+    
     if years is not None:
         years_list = list(range(years[0], years[1] + 1))
         predictors_df = predictors_df[predictors_df['time'].isin(years_list)]
@@ -138,13 +187,13 @@ def predict_yield(state, years=None):
 
 def main():
     states = [
-        # 'NSW', 
-        # 'VIC', 
-        # 'QLD', 
-        # 'SA', 
+        'NSW', 
+        'VIC', 
+        'QLD', 
+        'SA', 
         'WA',
     ]
-    years = [1950, 2021]  # Specify the range of years for which to predict yields
+    years = [2022, 2025]  # Specify the range of years for which to predict yields
     for state in states:
         print(f"Predicting yield for state: {state}")
         state_results = predict_yield(state, years)
@@ -152,8 +201,10 @@ def main():
         pathout = '/g/data/w97/mg5624/ABS_project/yield_model_analytics/modelled_yield/past_yield/'
         if not os.path.exists(pathout):
             os.makedirs(pathout)
-        
-        fileout = f'{state}_modelled_yield.csv'
+        if years is not None:
+            fileout = f'{state}_modelled_yield_{years[0]}-{years[1]}.csv'
+        else:
+            fileout = f'{state}_modelled_yield.csv'
         state_results.to_csv(pathout + fileout, index=False)
         print(f"Predicted {state} yields saved to: {pathout + fileout}")
 
