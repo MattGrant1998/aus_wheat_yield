@@ -118,22 +118,30 @@ def find_percentile_at_grid(rolling_data, baseline, threshold):
         baseline_data = rolling_data
     else:
         start_year, end_year = baseline
-        baseline_data = rolling_data.sel(time=slice(f'{start_year}-01-01', f'{end_year}-12-31'))
+        baseline_data = rolling_data.sel(time=slice(str(start_year), str(end_year)))
 
-    # Add in Feb 29th as a copy of Feb 28th for years that don't have it
-    years = np.unique(baseline_data['time.year'].values)
-    non_leap_years = [year for year in years if not pd.Timestamp(f'{year}-12-31').is_leap_year]
+    # Calendars with no leap days (cftime noleap / 360_day) have no Feb 29 to fill in
+    time_index = baseline_data.indexes['time']
+    no_leap_days = (isinstance(time_index, xr.CFTimeIndex)
+                    and time_index.calendar in ('noleap', '365_day', '360_day'))
 
-    # 2. Duplicate Feb 28 as Feb 29 for non-leap years
-    feb28 = baseline_data.sel(
-        time=((
-            baseline_data['time.month'] == 2
-            ) & (baseline_data['time.day'] == 28
-                 ) & baseline_data['time.year'].isin(non_leap_years)))
+    if no_leap_days:
+        baseline_with_feb29 = baseline_data
+    else:
+        # Add in Feb 29th as a copy of Feb 28th for years that don't have it
+        years = np.unique(baseline_data['time.year'].values)
+        non_leap_years = [year for year in years if not pd.Timestamp(f'{year}-12-31').is_leap_year]
 
-    feb28_coords = feb28['time'].values + np.timedelta64(1, 'D')
-    feb28.coords['time'] = ('time', feb28_coords)
-    baseline_with_feb29 = xr.concat([baseline_data, feb28], dim='time').sortby('time')
+        # 2. Duplicate Feb 28 as Feb 29 for non-leap years
+        feb28 = baseline_data.sel(
+            time=((
+                baseline_data['time.month'] == 2
+                ) & (baseline_data['time.day'] == 28
+                    ) & baseline_data['time.year'].isin(non_leap_years)))
+
+        feb28_coords = feb28['time'].values + np.timedelta64(1, 'D')
+        feb28.coords['time'] = ('time', feb28_coords)
+        baseline_with_feb29 = xr.concat([baseline_data, feb28], dim='time').sortby('time')
 
     baseline_with_feb29 = baseline_with_feb29.chunk({'time': -1})
     if threshold == 'mean':
@@ -175,7 +183,7 @@ def find_drought_days(hydrological_data, var_name, n_days, threshold, threshold_
         raise ValueError("Invalid threshold type. Use 'percentile' or 'absolute'.")
     drought_days = drought_days.rename(f'{n_days}_day_{var_name}_drought')
     drought_days = xr.merge([drought_days, hyd_rolling])
-    print(drought_days)
+    # print(drought_days)
     return drought_days
 
 
@@ -463,18 +471,18 @@ def save_extreme_days(
         baseline,
     )
     print('extremes dataaray created')
-    extreme_days1 = extreme_days.sel(lon=slice(135, None))
-    extreme_days2 = extreme_days.sel(lon=slice(None, 135))
+    # extreme_days1 = extreme_days.sel(lon=slice(135, None))
+    # extreme_days2 = extreme_days.sel(lon=slice(None, 135))
     if baseline == 'full_ts':
         baseline = [precip_data['time'].dt.year.min().item(), precip_data['time'].dt.year.max().item()]
     
     drought_threshold = str(drought_threshold).replace('.', 'p')
     heatwave_threshold = str(heatwave_threshold).replace('.', 'p')
     n_days_str = '_'.join([str(n) for n in n_days])
-    var = '30_met_drought_centered'
+    # var = '30_met_drought_centered'
     var = 'cdd'
     # filename1 = f'{var}_{years[0]}-{years[-1]}_1.nc'
-    filename2 = f'{var}_{years[0]}-{years[-1]}_2.nc'
+    filename = f'{var}_{years[0]}-{years[-1]}.nc'
     # filename = f'30_met_drought_centered_extremes_{years[0]}-{years[-1]}.nc'
     # filename = f'extreme_days_{years[0]}_{years[-1]}_frost_heatwave_{heatwave_threshold}_met_ag_drought_{n_days_str}_days_{drought_threshold}_{threshold_type}_baseline_{baseline[0]}-{baseline[-1]}.nc'
     # print('--------HEAT EXTREMES---------')
@@ -488,7 +496,7 @@ def save_extreme_days(
         os.makedirs(save_path)
 
     # extreme_days1.to_netcdf(save_path + filename1)
-    extreme_days2.to_netcdf(save_path + filename2)
+    extreme_days.to_netcdf(save_path + filename)
     # extreme_days.to_netcdf(save_path + filename)
     print('Saved extremes')
     return extreme_days
@@ -503,8 +511,8 @@ def main():
     heatwave_threshold = 32
     drought_threshold = 0.15
     threshold_type = 'percentile'
-    # save_path = '/g/data/w97/mg5624/ABS_project/extremes/daily/'
-    save_path = '/scratch/w97/mg5624/extremes/daily/'
+    save_path = '/g/data/w97/mg5624/ABS_project/extremes/daily/'
+    # save_path = '/scratch/w97/mg5624/extremes/daily/'
     baseline = 'full_ts'
     test = False
     if test:

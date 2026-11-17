@@ -2,8 +2,8 @@
 #PBS -P dt6
 #PBS -q normal
 #PBS -l ncpus=8
-#PBS -l mem=90GB
-#PBS -l walltime=4:00:00
+#PBS -l mem=50GB
+#PBS -l walltime=3:00:00
 #PBS -l storage=gdata/xp65+gdata/zz63+gdata/dt6+scratch/w97+gdata/w97+gdata/zv2
 #PBS -N ante_drought_trend
 #PBS -j oe

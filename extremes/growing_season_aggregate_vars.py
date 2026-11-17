@@ -34,7 +34,7 @@ from daily_extremes import (
 DAILY_ROOT = OUT_ROOT
 OUT_ROOT = '/g/data/w97/mg5624/ABS_project/extremes/FY_aggregated/'
 
-START_YEAR = 2021
+START_YEAR = 1970
 END_YEAR = 2025
 
 CROP = "Wheat"
@@ -50,7 +50,7 @@ VAR_CONFIG = {
     # "frost": ("sum", False),
     # "gdd": ("sum", False),
     # "tr": ("mean", False),
-    # "cdd": ("max", False),
+    "cdd": ("max", False),
     # "tmax": ("mean", False),
     # "tmin": ("mean", False),
     # "precip": ("mean", False),
@@ -60,12 +60,13 @@ VAR_CONFIG = {
     # "precip_drought_180": ("sum", True),
     # "sm_drought_30": ("sum", True),
     # "sm_drought_90": ("sum", True),
-    "sm_drought_180": ("sum", True),
+    # "sm_drought_180": ("sum", True),
 }
 
 # extreme var_name -> which raw underlying variable its intensity is
 # computed against (key into NC_VAR_NAME / RAW_VAR_OPENERS below)
 UNDERLYING_VAR = {
+    # 'cdd': "precip",
     "heatwave": "tmax",
     "precip_drought_30": "precip",
     "precip_drought_90": "precip",
@@ -198,14 +199,14 @@ def compute_intensity(extreme_da, extreme_name):
 
 def main():
     grid = get_reference_grid()
-
+    replace = True
     for var, (agg_type, has_intensity) in VAR_CONFIG.items():
         print(f"\n=== {var} ===")
 
         # ---------- aggregate the event/variable itself ----------
         out_dir = OUT_ROOT + f"{var}"
         out_path = out_dir + f"/{var}_FY_aggregated_{START_YEAR}-{END_YEAR}.nc"
-        if os.path.exists(out_path):
+        if os.path.exists(out_path) and not replace:
             print(f"  [SKIP] {var} FY aggregation already exists -> {out_path}")
         else:
             da = open_event_da(var)

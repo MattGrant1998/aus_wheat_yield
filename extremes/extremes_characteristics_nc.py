@@ -54,22 +54,6 @@ def find_extreme_intensities(extremes_ds, extreme):
     return merged
 
 
-# def find_extreme_intensities_absolute_thresh(extremes_ds, extreme, threshold):
-#     extreme_variable = {
-#         'drought': 'precip',
-#         'heatwave': 'tmax',
-#         'frost': 'tmin'
-#     }
-
-#     extreme_var = extreme_variable[extreme]
-#     extremes_ds[f'{extreme}_intensity'] = abs(
-#         (threshold - extremes_ds[extreme_var]) 
-#         / threshold
-#     ) * 100
-
-#     return extremes_ds
-
-
 def add_raw_climate_vars_to_extremes_ds(extremes_ds, climate_vars, precip_agg=90):
     """
     Adds the underlying climate variables to the extremes dataset.
@@ -125,28 +109,25 @@ def doy_to_date(x, year):
     return start_of_year + np.timedelta64(int(x) - 1, 'D')
 
 
-# def doy_to_date(x, year):
-#     # Convert x and year to arrays
-#     x = np.asarray(x)
-#     year = np.asarray(year)
+def _is_event_variable(name):
+    """Variables that are NaN on non-event days, so a sum means 'count the days'."""
+    name = str(name)
+    return (name in ('heatwave', 'frost', 'high_rainfall_days')
+            or 'drought' in name)
 
-#     # Create output array
-#     out = np.full_like(x, np.datetime64('NaT', 'D'), dtype='datetime64[D]')
-
-#     # Mask for valid DOY
-#     valid = ~np.isnan(x)
-
-#     # Compute start-of-year for valid entries
-#     start = np.array([np.datetime64(f"{int(y)}-01-01", 'D') for y in year[valid]])
-
-#     # Compute dates
-#     out[valid] = start + (x[valid].astype(int) - 1).astype("timedelta64[D]")
-
-#     return out
 
 def aggregate_variable(extremes_da, season_stage_doys, end_of_season_doy, agg_type):
-    if isinstance(extremes_da.indexes['time'], xr.CFTimeIndex):
-        extremes_da['time'] = extremes_da.indexes['time'].to_datetimeindex()
+    time_index = extremes_da.indexes['time']
+    if isinstance(time_index, xr.CFTimeIndex):
+        if time_index.calendar == '360_day':
+            years = np.asarray(time_index.year, dtype=int)
+            doys = np.asarray(time_index.dayofyear, dtype=int)
+            hours = np.asarray(time_index.hour, dtype=int)
+            jan1 = (years - 1970).astype('datetime64[Y]').astype('datetime64[D]')
+            extremes_da['time'] = (jan1 + (doys - 1).astype('timedelta64[D]')
+                                   + hours.astype('timedelta64[h]')).astype('datetime64[ns]')
+        else:
+            extremes_da['time'] = time_index.to_datetimeindex()
     else:
         extremes_da['time'] = pd.to_datetime(extremes_da['time'].values)
     agg_var_ds = xr.Dataset()
@@ -160,8 +141,6 @@ def aggregate_variable(extremes_da, season_stage_doys, end_of_season_doy, agg_ty
             dask="allowed",
             output_dtypes=[np.dtype("datetime64[D]")]
         )
-        # print('END OF SEASON DATE:')
-        # print(end_of_season_date)
 
         end_of_season_month = end_of_season_date.dt.month
         FY_conversion = xr.where(end_of_season_month > 6, year - 1, year)
@@ -208,23 +187,10 @@ def aggregate_variable(extremes_da, season_stage_doys, end_of_season_doy, agg_ty
             dask="allowed",
             output_dtypes=[np.dtype("datetime64[D]")]
         )
-
-        # if year == 2007:
-        #     print('NSW SEASON DATES:')
-        #     print('FY: ', year)
-        #     print('start of stage date: ', start_stage_date.sel(lat=-33, lon=148, method='nearest'))
-        #     print('end of stage date: ', end_stage_date.sel(lat=-33, lon=148, method='nearest'))
-        #     print('end of season date: ', end_of_season_date_FY.sel(lat=-33, lon=148, method='nearest'))
-
-        #     print('QLD SEASON DATES:')
-        #     print('FY: ', year)
-        #     print('start of stage date: ', start_stage_date.sel(lat=-24, lon=149, method='nearest'))
-        #     print('end of stage date: ', end_stage_date.sel(lat=-24, lon=149, method='nearest'))
-        #     print('end of season date: ', end_of_season_date_FY.sel(lat=-24, lon=149, method='nearest'))
         extremes_season_stage = subset_da_in_time(extremes_da, start_stage_date, end_stage_date)
 
         if agg_type == 'sum':
-            if extremes_da.name not in ['tmax', 'tmin', 'precip', 'soil_moisture', 'growing_degree_days']:
+            if _is_event_variable(extremes_da.name):
                 extremes_season_stage = xr.where(~np.isnan(extremes_season_stage), 1, 0)
             agg_var = extremes_season_stage.sum(dim='time')
         elif agg_type == 'mean':
@@ -235,7 +201,6 @@ def aggregate_variable(extremes_da, season_stage_doys, end_of_season_doy, agg_ty
             agg_var = extremes_season_stage.max(dim='time')
         else:
             raise ValueError(f'Aggregation type {agg_type} not recognised.')
-        # agg_var = agg_var.expand_dims(time=[np.datetime64(str(year))])
         agg_var = agg_var.expand_dims(time=[year])
         agg_var.name = extremes_da.name
         agg_var = agg_var.to_dataset()
@@ -244,11 +209,6 @@ def aggregate_variable(extremes_da, season_stage_doys, end_of_season_doy, agg_ty
         else:
             agg_var_ds = xr.concat([agg_var_ds, agg_var], dim='time')
 
-        # print(agg_var)
-    # var_name = list(agg_var.data_vars)[0]
-    # agg_var[var_name].mean(dim='time').plot()
-    # plt.savefig(f'{var_name}_vis.png')
-    # print('PLotted 1')
     return agg_var_ds
 
 
@@ -267,17 +227,6 @@ def circular_midpoint(doy1, doy2, year_len=365):
 
 
 def growing_season_tercile_dates(crop_calendar, antecedent=False):
-    # start_of_season = circular_midpoint(
-    #     crop_calendar['plant.start'],
-    #     crop_calendar['plant']
-    # )
-
-    # end_of_season = circular_midpoint(
-    #     crop_calendar['harvest'],
-    #     crop_calendar['harvest.end']
-    # )
-    # start_of_season = crop_calendar['plant.start']
-    # end_of_season = crop_calendar['harvest.end']
     start_of_season = crop_calendar['plant']
     end_of_season = crop_calendar['harvest']
     if antecedent:
@@ -296,7 +245,6 @@ def growing_season_tercile_dates(crop_calendar, antecedent=False):
     )
     tercile_len = np.floor(mean_season_len / 3)
 
-    # start_of_season = crop_calendar['plant.start']
     start_of_mid = start_of_season + tercile_len + 1
     start_of_harvest = start_of_season + (2 * tercile_len)
     
@@ -337,21 +285,12 @@ def create_ds_of_aggregations_over_growing_season(extremes_da, var, crop, agg_ty
         return antecedent_agg
     
     start_of_season, start_of_mid, start_of_harvest, end_of_season = growing_season_tercile_dates(crop_calendar)
-    print(start_of_season, start_of_mid, start_of_harvest, end_of_season)
-    cropping_dates = xr.merge([
-        start_of_season.rename('start_of_season'),
-        start_of_mid.rename('start_of_mid'),
-        start_of_harvest.rename('start_of_harvest'),
-        end_of_season.rename('end_of_season')
-    ])
-    # cropping_dates.to_netcdf(f'/srv/ccrc/LandAU/z5459957/data/extremes/FY_aggregated/{crop}_growing_season_terciles.nc')
-
-    # import sys
-    # sys.exit()
-    # start_of_season = crop_calendar['plant.start']
-    # start_of_mid = crop_calendar['plant.end'] + 1
-    # start_of_harvest = crop_calendar['harvest.start']
-    # end_of_season = crop_calendar['harvest.end']
+    # cropping_dates = xr.merge([
+    #     start_of_season.rename('start_of_season'),
+    #     start_of_mid.rename('start_of_mid'),
+    #     start_of_harvest.rename('start_of_harvest'),
+    #     end_of_season.rename('end_of_season')
+    # ])
 
     # print('--------------FULL SEASON ------------------')
     full_growing_agg = aggregate_variable(extremes_da, [start_of_season, end_of_season], end_of_season, agg_type)
@@ -400,7 +339,7 @@ def load_crop_growing_season_and_regrid(crop, target_grid):
 def aggregate_variable_for_all_extremes(extremes_ds, variable_args, crop, grid, antecedent=False):
     aggregated_extremes = xr.Dataset()
     for var, args in variable_args.items():
-        print(var)
+        # print(var)
         extremes_da_var = extremes_ds[var].reset_coords(drop=True)
         agg_type, add_antecedent, antecedent_days = args
         season_aggregations = create_ds_of_aggregations_over_growing_season(
@@ -413,17 +352,10 @@ def aggregate_variable_for_all_extremes(extremes_ds, variable_args, crop, grid, 
             add_antecedent,
             antecedent_days
         )
-        # aggregated_extremes = xr.merge([aggregated_extremes, season_aggregations])
-        # if 'heatwave' in var:
-        #     var = f'new_{var}'
         if antecedent:
             filename_out = f'{var}_FY_antecedent_agg_1950-2021.nc'
         else:
             filename_out = f'{var}_FY_agg_1950-2021.nc'
-        # filename_out = f'{var}_FY_agg_middling.nc'
-        # filename_out = f'{var}_FY_agg_start_end.nc'
-        # savefile = 'soil_moisture_aggregations.nc'
-        # savefile = 'precip_aggregations_final.nc'
         datadir = '/g/data/w97/mg5624/ABS_project/'
         savepath = datadir + 'extremes/FY_aggregated/'
         season_aggregations.to_netcdf(savepath + filename_out)
@@ -466,7 +398,7 @@ def main():
     datadir = '/g/data/w97/mg5624/ABS_project/'
     extremes_ds_path = datadir + 'extremes/daily/'
     test = False
-    extremes_type = 'soil_moisture'
+    extremes_type = 'consecutive_dry_days'
     
     if test:
         years = [2006, 2010]
@@ -501,7 +433,7 @@ def main():
         'ag_drought': 'ag_drought_extremes.nc',
         # 'ag_drought': 'ag_drought_days_30_days.nc',
         'growing_degree_days': 'gdd_1950-2021.nc',
-        'consecutive_dry_days': 'cdd_1950-2021.nc',
+        'consecutive_dry_days': 'cdd_1970-2025.nc',
         'temperature_range': 'tr_1950-2021.nc',
         'soil_moisture': soil_moisture_da,
         'test': 'old_versions/test_extreme_days_2006_2010_frost_heatwave_32_met_ag_drought_90_days_0p15_percentile_baseline_2006-2010.nc',
@@ -641,12 +573,13 @@ def main():
         # 'tmax': ['mean', False, None],
         # 'tmin': ['mean', False, None],
         # 'tavg': ['mean', False, None],
-        'growing_degree_days': ['cumsum', False, None],
-        # 'consecutive_dry_days': ['max', False, None],
+        # 'growing_degree_days': ['cumsum', False, None],
+        'consecutive_dry_days': ['max', False, None],
         # 'temperature_range': ['mean', False, None],
         # 'soil_moisture': ['mean', False, None],
     }
 
+    
     args = {
         'all': variable_args,
         'growing_degree_days': {'growing_degree_days': ['sum', False, None]},

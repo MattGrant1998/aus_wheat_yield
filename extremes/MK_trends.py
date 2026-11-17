@@ -218,25 +218,25 @@ def load_and_save_data(variable, year_from, year_to, season_stage, test_type='MK
 def run_MK_test_for_variables():
     arguments = []                  
     start_year = '1970'
-    end_year = '2020'
+    end_year = '2015'
     VARIABLES = [
-        '30_day_precip_drought_FY_antecedent_agg',
-        # '180_day_precip_drought_sum', 
+        # '30_day_precip_drought_FY_antecedent_agg',
+        '180_day_precip_drought_sum', 
         # '90_day_precip_drought_sum', 
-        # '30_day_precip_drought_sum', 
-        # 'heatwave_sum', 
-        # 'frost_sum',
-        # '180_day_precip_drought_intensity_mean', 
+        '30_day_precip_drought_sum', 
+        'heatwave_sum', 
+        'frost_sum',
+        '180_day_precip_drought_intensity_mean', 
         # '90_day_precip_drought_intensity_mean', 
-        # '30_day_precip_drought_intensity_mean', 
-        # 'heatwave_intensity_mean', 
+        '30_day_precip_drought_intensity_mean', 
+        'heatwave_intensity_mean', 
     ]
     for season in [
-        # 'growing', 
-        # 'planting', 
-        # 'mid', 
-        # 'harvest',
-        'antecedent',
+        'growing', 
+        'planting', 
+        'mid', 
+        'harvest',
+        # 'antecedent',
         ]:
         for var in VARIABLES:
             arguments.append((
